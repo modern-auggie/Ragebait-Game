@@ -11,7 +11,10 @@ export class Door {
   hidden: boolean;
   touched = false;
 
-  constructor(private scene: Phaser.Scene, private def: DoorDef) {
+  private readonly def: DoorDef;
+
+  constructor(private scene: Phaser.Scene, def: DoorDef) {
+    this.def = { ...def };
     this.id = def.id;
     this.kind = def.kind;
     this.open = def.open ?? true;

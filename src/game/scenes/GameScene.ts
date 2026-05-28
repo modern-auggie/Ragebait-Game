@@ -4,7 +4,7 @@ import { Player } from '../entities/Player';
 import type { Platform } from '../entities/Platform';
 import { LEVELS } from '../levels/levels';
 import type { LevelDefinition } from '../levels/levelTypes';
-import { addBurst, addFloatingText, COLORS, drawBackground } from '../systems/Effects';
+import { addBurst, COLORS, drawBackground } from '../systems/Effects';
 import { Hud } from '../systems/Hud';
 import { InputController } from '../systems/InputController';
 import { LevelBehaviors } from '../systems/LevelBehaviors';
@@ -28,6 +28,7 @@ export class GameScene extends Phaser.Scene {
   private background?: Phaser.GameObjects.Graphics;
   private settingsOverlay?: Phaser.GameObjects.Container;
   private transitioning = false;
+  private colliders: Phaser.Physics.Arcade.Collider[] = [];
 
   constructor() {
     super('GameScene');
@@ -92,7 +93,6 @@ export class GameScene extends Phaser.Scene {
     const y = this.player.sprite.y;
     this.player.kill();
     addBurst(this, x, y, COLORS.spike, 18);
-    addFloatingText(this, 'NOPE', 172, 360);
     AudioSystem.sfx('death');
     this.cameras.main.flash(110, 220, 38, 38, false);
     this.shake(0.018, 230);
@@ -117,8 +117,8 @@ export class GameScene extends Phaser.Scene {
         const nextLevelGroup = Math.floor(nextIndex / 5) + 1;
         if (nextLevelGroup !== this.currentLevelGroup) {
           GameProgress.recordLevelComplete(this.currentLevelGroup, this.deaths);
-          this.deaths = 0;
-          this.currentLevelGroup = nextLevelGroup;
+          this.showRoundTransition(undefined, () => this.scene.start('TitleScene'), `LEVEL ${this.currentLevelGroup} COMPLETE`);
+          return;
         }
         this.showRoundTransition(nextIndex, () => {
           this.startLevel(nextIndex);
@@ -172,6 +172,8 @@ export class GameScene extends Phaser.Scene {
   private clearLevel(): void {
     this.tweens.killAll();
     this.time.removeAllEvents();
+    this.colliders.forEach((collider) => collider.destroy());
+    this.colliders = [];
     this.settingsOverlay?.destroy(true);
     this.settingsOverlay = undefined;
     this.player?.destroy();
@@ -186,19 +188,21 @@ export class GameScene extends Phaser.Scene {
     const sprite = this.player.sprite;
 
     this.loaded.platforms.forEach((platform) => {
-      this.physics.add.collider(sprite, platform.zone, () => this.handlePlatformCollision(platform));
+      this.colliders.push(this.physics.add.collider(sprite, platform.zone, () => this.handlePlatformCollision(platform)));
     });
 
     this.loaded.spikes.forEach((spike) => {
-      this.physics.add.overlap(sprite, spike.zone, () => this.killPlayer(), undefined, this);
+      this.colliders.push(this.physics.add.overlap(sprite, spike.zone, () => this.killPlayer(), undefined, this));
     });
 
     this.loaded.doors.forEach((door) => {
-      this.physics.add.overlap(sprite, door.zone, () => this.behaviors?.onDoorTouched(door), undefined, this);
+      this.colliders.push(this.physics.add.overlap(sprite, door.zone, () => this.behaviors?.onDoorTouched(door), undefined, this));
     });
 
     this.loaded.buttons.forEach((button) => {
-      this.physics.add.overlap(sprite, button.zone, () => this.behaviors?.onButtonPressed(button), undefined, this);
+      this.colliders.push(
+        this.physics.add.overlap(sprite, button.zone, () => this.behaviors?.onButtonPressed(button), undefined, this),
+      );
     });
   }
 
@@ -215,10 +219,10 @@ export class GameScene extends Phaser.Scene {
     return Phaser.Utils.Array.GetRandom(messages);
   }
 
-  private showRoundTransition(nextIndex: number | undefined, onDone: () => void): void {
+  private showRoundTransition(nextIndex: number | undefined, onDone: () => void, labelOverride?: string): void {
     this.transitioning = true;
     const next = nextIndex === undefined ? undefined : LEVELS[nextIndex];
-    const label = next ? `LEVEL ${next.name}` : 'DEMO COMPLETE';
+    const label = labelOverride ?? (next ? `LEVEL ${next.name}` : 'DEMO COMPLETE');
     const overlay = this.add.container(0, 0).setDepth(300);
     const dim = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x050104, 0.35).setOrigin(0);
     const top = this.add.rectangle(GAME_WIDTH / 2, -GAME_HEIGHT / 4, GAME_WIDTH + 34, GAME_HEIGHT / 2 + 10, 0x21060b, 1);

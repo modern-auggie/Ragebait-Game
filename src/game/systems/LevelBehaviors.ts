@@ -24,11 +24,11 @@ export class LevelBehaviors {
   private r11Triggered = false;
   private r12First = false;
   private r12Second = false;
+  private r13Revealed = false;
   private r13Triggered = false;
   private r14Secret = false;
   private r14Chase = false;
   private r15Left = false;
-  private r15Split = false;
   private r21Triggered = false;
   private r22Second = false;
   private r22Third = false;
@@ -36,6 +36,8 @@ export class LevelBehaviors {
   private r23Runner = false;
   private r24Started = false;
   private r25Stage = 0;
+  private wrongDoorSide: 'left' | 'right' = 'right';
+  private wrongDoorLocked = false;
 
   constructor(
     private scene: Phaser.Scene,
@@ -123,6 +125,11 @@ export class LevelBehaviors {
   onDoorTouched(door: Door): void {
     if (!door.open && door.kind !== 'fakeDeadly') return;
 
+    if (this.level.behavior === 'wrongDoorLoop') {
+      this.triggerWrongDoor(door);
+      return;
+    }
+
     if (door.kind === 'fakeDeadly') {
       this.host.killPlayer('Maybe that wasn\'t the real door.');
       return;
@@ -139,7 +146,7 @@ export class LevelBehaviors {
   }
 
   private updateR11(): void {
-    if (this.r11Triggered || this.host.playerX() < 560) return;
+    if (this.r11Triggered || this.host.playerX() < 616) return;
     this.r11Triggered = true;
     this.findPlatform('door-drop')?.drop(45);
     this.trapFeedback();
@@ -147,24 +154,30 @@ export class LevelBehaviors {
 
   private updateR12(): void {
     const x = this.host.playerX();
-    if (!this.r12First && x > 312) {
+    if (!this.r12First && x > 430) {
       this.r12First = true;
       this.findPlatform('drop-one')?.drop(55);
       this.trapFeedback();
     }
-    if (!this.r12Second && x > 530) {
+    if (!this.r12Second && x > 780) {
       this.r12Second = true;
-      this.findPlatform('drop-two')?.drop(55);
+      this.findPlatform('drop-two')?.drop(35);
       this.trapFeedback();
     }
   }
 
   private updateR13(): void {
-    if (this.r13Triggered || this.host.playerX() < 610) return;
+    const x = this.host.playerX();
+    if (!this.r13Revealed && x > 300) {
+      this.r13Revealed = true;
+      this.findPlatform('move-gap')?.drop(35);
+      this.trapFeedback();
+    }
+
+    if (this.r13Triggered || x < 470) return;
     this.r13Triggered = true;
-    this.findPlatform('floor-left')?.resizeTo(0, 390, 440, 150, 360);
-    this.findPlatform('floor-right')?.resizeTo(520, 390, 440, 150, 360);
-    this.host.showMessage('The gap moved.', 850);
+    this.findPlatform('floor-left')?.resizeTo(0, 390, 448, 150, 1850);
+    this.findPlatform('floor-right')?.resizeTo(548, 390, 412, 150, 1850);
     this.trapFeedback();
   }
 
@@ -179,36 +192,32 @@ export class LevelBehaviors {
 
     if (!this.r14Chase && x > 430) {
       this.r14Chase = true;
-      this.findPlatform('right-chase-1')?.drop(80);
-      this.findPlatform('right-chase-2')?.drop(240);
-      this.findPlatform('right-chase-3')?.drop(400);
+      ['gap-expand-1', 'gap-expand-2', 'gap-expand-3', 'gap-expand-4', 'gap-expand-5'].forEach((id, index) => {
+        this.findPlatform(id)?.drop(130 + index * 280);
+      });
       this.trapFeedback();
     }
   }
 
   private updateR15(): void {
     const x = this.host.playerX();
-    if (!this.r15Left && x > 360) {
+    if (!this.r15Left && x > 320) {
       this.r15Left = true;
-      this.findPlatform('final-1')?.drop(45);
-      this.findPlatform('final-2')?.drop(175);
-      this.findPlatform('final-3')?.drop(305);
-      this.host.showMessage('Run.', 700);
-      this.trapFeedback();
-    }
-
-    if (!this.r15Split && x > 710) {
-      this.r15Split = true;
-      this.findPlatform('split-player')?.moveTo(542, 390, 230);
-      this.host.showMessage('Split.', 720);
+      ['final-gap-1', 'final-gap-2', 'final-gap-3', 'final-gap-4', 'final-gap-5', 'final-gap-6'].forEach((id, index) => {
+        this.findPlatform(id)?.drop(index * 120);
+      });
+      this.scene.time.delayedCall(1350, () => {
+        this.findPlatform('split-player')?.moveTo(444, 390, 220);
+        this.trapFeedback();
+      });
       this.trapFeedback();
     }
   }
 
   private updateR21(): void {
-    if (this.r21Triggered || this.host.playerY() < 320 || this.host.playerX() > 560) return;
+    if (this.r21Triggered || this.host.playerY() < 320 || this.host.playerX() > 440) return;
     this.r21Triggered = true;
-    this.findSpike('shy-spike')?.moveTo(356, 358, 230);
+    this.findSpike('shy-spike')?.moveTo(230, 358, 260);
     this.trapFeedback();
   }
 
@@ -227,25 +236,35 @@ export class LevelBehaviors {
   }
 
   private updateR23(): void {
-    if (!this.r23Swap && this.host.playerY() > 300) {
+    if (!this.r23Swap && this.host.playerY() > 286 && this.host.playerX() > 384 && this.host.playerX() < 642) {
       this.r23Swap = true;
-      this.findSpike('shaft-spike')?.moveTo(346, 358, 150);
+      this.findSpike('shaft-spike')?.moveTo(416, 358, 360);
       this.trapFeedback();
     }
 
-    if (!this.r23Runner && this.host.playerX() > 720) {
+    if (!this.r23Runner && this.host.playerY() > 320 && this.host.playerX() > 724) {
       this.r23Runner = true;
-      this.findSpike('runner-spike')?.moveTo(238, 358, 900);
+      this.findSpike('runner-spike')?.moveTo(-80, 358, 4300, 'Linear');
+      this.findSpike('shaft-spike')?.moveTo(-80, 358, 2380, 'Linear');
       this.host.showMessage('Back up.', 800);
       this.trapFeedback();
     }
   }
 
   private updateR24(): void {
-    if (this.r24Started || this.host.playerX() < 205) return;
+    if (this.r24Started || this.host.playerX() < 310) return;
     this.r24Started = true;
-    ['stair-chase-1', 'stair-chase-2', 'stair-chase-3', 'stair-chase-4', 'stair-chase-5'].forEach((id, index) => {
-      this.scene.time.delayedCall(index * 260, () => this.findSpike(id)?.reveal());
+    [
+      'stair-chase-1',
+      'stair-chase-2',
+      'stair-chase-3',
+      'stair-chase-4',
+      'stair-chase-5',
+      'stair-chase-6',
+      'stair-chase-7',
+      'stair-chase-8',
+    ].forEach((id, index) => {
+      this.scene.time.delayedCall(index * 190, () => this.findSpike(id)?.reveal());
     });
     this.host.showMessage('Move.', 700);
     this.trapFeedback();
@@ -253,27 +272,27 @@ export class LevelBehaviors {
 
   private updateR25(): void {
     const x = this.host.playerX();
-    if (this.r25Stage === 0 && x < 610) {
+    if (this.r25Stage === 0 && x < 500) {
       this.r25Stage = 1;
-      this.findSpike('rush-one')?.moveTo(900, 358, 1180);
+      this.findSpike('rush-one')?.moveTo(900, 358, 2350, 'Linear');
       this.host.showMessage('Hide.', 650);
       this.trapFeedback();
     }
     if (this.r25Stage === 1 && x > 780) {
       this.r25Stage = 2;
     }
-    if (this.r25Stage === 2 && x < 610) {
+    if (this.r25Stage === 2 && x < 500) {
       this.r25Stage = 3;
-      this.findSpike('rush-two')?.moveTo(900, 358, 1050);
+      this.findSpike('rush-two')?.moveTo(900, 358, 2300, 'Linear');
       this.host.showMessage('Again.', 650);
       this.trapFeedback();
     }
     if (this.r25Stage === 3 && x > 780) {
       this.r25Stage = 4;
     }
-    if (this.r25Stage === 4 && x < 610) {
+    if (this.r25Stage === 4 && x < 500) {
       this.r25Stage = 5;
-      this.findSpike('rush-three')?.moveTo(82, 358, 1200);
+      this.findSpike('rush-three')?.moveTo(82, 358, 2550, 'Linear');
       this.host.showMessage('Door. Now.', 650);
       this.trapFeedback();
     }
@@ -315,6 +334,20 @@ export class LevelBehaviors {
       this.findDoor('real-exit')?.reveal();
     });
     this.trapFeedback();
+  }
+
+  private triggerWrongDoor(door: Door): void {
+    if (this.wrongDoorLocked) return;
+    this.wrongDoorLocked = true;
+    this.wrongDoorSide = this.wrongDoorSide === 'right' ? 'left' : 'right';
+    const nextX = this.wrongDoorSide === 'left' ? 38 : 884;
+    door.setPosition(nextX, 320);
+    this.host.showMessage('Wrong door.', 900);
+    AudioSystem.sfx('trap');
+    this.host.shake(0.006, 110);
+    this.scene.time.delayedCall(280, () => {
+      this.wrongDoorLocked = false;
+    });
   }
 
   private trapFeedback(): void {

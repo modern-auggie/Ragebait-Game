@@ -7,9 +7,11 @@ export class Button {
   readonly zone: Phaser.GameObjects.Zone;
   readonly visual: Phaser.GameObjects.Graphics;
   readonly label?: string;
+  readonly def: ButtonDef;
   pressed = false;
 
-  constructor(private scene: Phaser.Scene, readonly def: ButtonDef) {
+  constructor(private scene: Phaser.Scene, def: ButtonDef) {
+    this.def = { ...def };
     this.id = def.id;
     this.label = def.label;
     this.visual = scene.add.graphics({ x: def.x, y: def.y });

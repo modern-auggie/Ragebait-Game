@@ -13,7 +13,7 @@ export class Platform {
   constructor(private scene: Phaser.Scene, def: PlatformDef) {
     this.id = def.id;
     this.kind = def.kind ?? 'solid';
-    this.def = def;
+    this.def = { ...def };
     this.visual = scene.add.graphics({ x: def.x, y: def.y });
     this.zone = scene.add.zone(def.x + def.w / 2, def.y + def.h / 2, def.w, def.h);
     scene.physics.add.existing(this.zone, true);

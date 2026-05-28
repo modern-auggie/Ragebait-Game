@@ -9,6 +9,7 @@ export type LevelBehaviorId =
   | 'round2ShaftSpikeSwap'
   | 'round2StairChase'
   | 'round2CrawlRush'
+  | 'wrongDoorLoop'
   | 'blank'
   | 'fakeFloorNearDoor'
   | 'jumpRevealsSpikes'

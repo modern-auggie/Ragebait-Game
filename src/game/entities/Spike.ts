@@ -9,7 +9,10 @@ export class Spike {
   readonly orientation: SpikeOrientation;
   hidden: boolean;
 
-  constructor(private scene: Phaser.Scene, private def: SpikeDef) {
+  private readonly def: SpikeDef;
+
+  constructor(private scene: Phaser.Scene, def: SpikeDef) {
+    this.def = { ...def };
     this.id = def.id;
     this.orientation = def.orientation ?? 'up';
     this.hidden = Boolean(def.hidden);
@@ -69,7 +72,7 @@ export class Spike {
     });
   }
 
-  moveTo(x: number, y: number, duration = 360): void {
+  moveTo(x: number, y: number, duration = 360, ease = 'Cubic.Out'): void {
     const state = { x: this.visual.x, y: this.visual.y };
     const body = this.zone.body as Phaser.Physics.Arcade.StaticBody;
     body.enable = true;
@@ -80,7 +83,7 @@ export class Spike {
       x,
       y,
       duration,
-      ease: 'Cubic.Out',
+      ease,
       onUpdate: () => this.setPosition(state.x, state.y),
       onComplete: () => this.setPosition(x, y),
     });
