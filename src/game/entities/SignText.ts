@@ -18,6 +18,7 @@ export class SignText {
         wordWrap: { width: width - 16 },
       })
       .setOrigin(0.5);
+    this.label.setResolution(2);
 
     const height = Math.max(34, this.label.height + 14);
     this.panel.fillStyle(0x000000, 0.32);

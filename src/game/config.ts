@@ -3,8 +3,8 @@ import { EndScene } from './scenes/EndScene';
 import { GameScene } from './scenes/GameScene';
 import { TitleScene } from './scenes/TitleScene';
 
-export const GAME_WIDTH = 720;
-export const GAME_HEIGHT = 390;
+export const GAME_WIDTH = 960;
+export const GAME_HEIGHT = 540;
 
 export const gameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -12,6 +12,11 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   width: GAME_WIDTH,
   height: GAME_HEIGHT,
   backgroundColor: '#120408',
+  render: {
+    antialias: false,
+    pixelArt: true,
+    roundPixels: true,
+  },
   scene: [TitleScene, GameScene, EndScene],
   input: {
     activePointers: 4,

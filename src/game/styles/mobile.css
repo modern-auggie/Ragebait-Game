@@ -25,6 +25,8 @@ body {
 canvas {
   display: block;
   border-radius: 10px;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
   box-shadow:
     0 0 0 2px rgba(255, 215, 215, 0.12),
     0 0 48px rgba(220, 38, 38, 0.16),

@@ -5,10 +5,12 @@ export class Hud {
   private readonly levelText: Phaser.GameObjects.Text;
   private readonly deathText: Phaser.GameObjects.Text;
   private readonly messageText: Phaser.GameObjects.Text;
-  private readonly restartPanel: Phaser.GameObjects.Graphics;
-  private readonly restartText: Phaser.GameObjects.Text;
+  private readonly items: Phaser.GameObjects.GameObject[] = [];
 
-  constructor(private scene: Phaser.Scene, onRestart: () => void) {
+  constructor(
+    private scene: Phaser.Scene,
+    actions: { onRestart: () => void; onHome: () => void; onSettings: () => void },
+  ) {
     this.levelText = scene.add
       .text(20, 18, 'Level 1', {
         fontFamily: '"Arial Black", Impact, Inter, Arial, sans-serif',
@@ -20,6 +22,7 @@ export class Hud {
       })
       .setDepth(100)
       .setScrollFactor(0);
+    this.levelText.setResolution(2);
 
     this.deathText = scene.add
       .text(20, 44, 'Deaths 0', {
@@ -30,32 +33,11 @@ export class Hud {
       })
       .setDepth(100)
       .setScrollFactor(0);
+    this.deathText.setResolution(2);
 
-    this.restartPanel = scene.add.graphics();
-    this.restartPanel.setDepth(100);
-    this.restartPanel.setScrollFactor(0);
-    this.restartPanel.fillStyle(0x1f070b, 0.86);
-    this.restartPanel.fillRoundedRect(GAME_WIDTH - 90, 18, 70, 34, 5);
-    this.restartPanel.lineStyle(3, 0x050104, 0.9);
-    this.restartPanel.strokeRoundedRect(GAME_WIDTH - 90, 18, 70, 34, 5);
-    this.restartPanel.lineStyle(1, 0xffd7d7, 0.28);
-    this.restartPanel.strokeRoundedRect(GAME_WIDTH - 84, 23, 58, 24, 3);
-    this.restartPanel.setInteractive(
-      new Phaser.Geom.Rectangle(GAME_WIDTH - 90, 18, 70, 34),
-      Phaser.Geom.Rectangle.Contains,
-    );
-    this.restartPanel.on('pointerdown', onRestart);
-
-    this.restartText = scene.add
-      .text(GAME_WIDTH - 55, 35, 'R', {
-        fontFamily: '"Arial Black", Impact, Inter, Arial, sans-serif',
-        fontSize: '17px',
-        color: '#fee2e2',
-        fontStyle: '900',
-      })
-      .setOrigin(0.5)
-      .setDepth(101)
-      .setScrollFactor(0);
+    this.createHudButton(GAME_WIDTH - 258, 18, 74, 'HOME', actions.onHome);
+    this.createHudButton(GAME_WIDTH - 176, 18, 74, 'SET', actions.onSettings);
+    this.createHudButton(GAME_WIDTH - 94, 18, 74, 'R', actions.onRestart);
 
     this.messageText = scene.add
       .text(GAME_WIDTH / 2, 74, '', {
@@ -70,10 +52,12 @@ export class Hud {
       .setDepth(100)
       .setScrollFactor(0)
       .setAlpha(0);
+    this.messageText.setResolution(2);
+    this.items.push(this.levelText, this.deathText, this.messageText);
   }
 
-  setLevel(levelNumber: number, levelName: string): void {
-    this.levelText.setText(`Level ${levelNumber}: ${levelName}`);
+  setLevel(levelName: string): void {
+    this.levelText.setText(`Level ${levelName}`);
   }
 
   setDeaths(deaths: number): void {
@@ -96,10 +80,33 @@ export class Hud {
   }
 
   destroy(): void {
-    this.levelText.destroy();
-    this.deathText.destroy();
-    this.messageText.destroy();
-    this.restartPanel.destroy();
-    this.restartText.destroy();
+    this.items.forEach((item) => item.destroy());
+  }
+
+  private createHudButton(x: number, y: number, width: number, label: string, onClick: () => void): void {
+    const panel = this.scene.add.graphics();
+    panel.setDepth(100);
+    panel.setScrollFactor(0);
+    panel.fillStyle(0x1f070b, 0.88);
+    panel.fillRoundedRect(x, y, width, 34, 4);
+    panel.lineStyle(3, 0x050104, 0.9);
+    panel.strokeRoundedRect(x, y, width, 34, 4);
+    panel.lineStyle(1, 0xffd7d7, 0.28);
+    panel.strokeRoundedRect(x + 5, y + 5, width - 10, 24, 2);
+    panel.setInteractive(new Phaser.Geom.Rectangle(x, y, width, 34), Phaser.Geom.Rectangle.Contains);
+    panel.on('pointerdown', onClick);
+
+    const text = this.scene.add
+      .text(x + width / 2, y + 17, label, {
+        fontFamily: '"Arial Black", Impact, Inter, Arial, sans-serif',
+        fontSize: label.length > 1 ? '13px' : '17px',
+        color: '#fee2e2',
+        fontStyle: '900',
+      })
+      .setOrigin(0.5)
+      .setDepth(101)
+      .setScrollFactor(0);
+    text.setResolution(2);
+    this.items.push(panel, text);
   }
 }

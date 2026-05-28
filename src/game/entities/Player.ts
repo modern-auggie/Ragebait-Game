@@ -4,8 +4,8 @@ import type { InputState } from '../systems/InputController';
 
 export class Player {
   readonly sprite: Phaser.Physics.Arcade.Sprite;
-  private readonly speed = 190;
-  private readonly jumpVelocity = -510;
+  private readonly speed = 230;
+  private readonly jumpVelocity = -535;
   private readonly coyoteMs = 115;
   private readonly jumpBufferMs = 130;
   private lastGroundedAt = 0;

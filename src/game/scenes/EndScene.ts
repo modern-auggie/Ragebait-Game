@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { addBurst, drawBackground } from '../systems/Effects';
+import { AudioSystem } from '../systems/AudioSystem';
 
 export class EndScene extends Phaser.Scene {
   constructor() {
@@ -11,7 +12,7 @@ export class EndScene extends Phaser.Scene {
     drawBackground(this);
     const deaths = data.deaths ?? 0;
 
-    this.add
+    const title = this.add
       .text(GAME_WIDTH / 2, 92, 'Demo complete', {
         fontFamily: '"Arial Black", Impact, Inter, Arial, sans-serif',
         fontSize: '42px',
@@ -22,8 +23,9 @@ export class EndScene extends Phaser.Scene {
         strokeThickness: 8,
       })
       .setOrigin(0.5);
+    title.setResolution(2);
 
-    this.add
+    const deathsText = this.add
       .text(GAME_WIDTH / 2, 154, `Total deaths: ${deaths}`, {
         fontFamily: '"Arial Black", Impact, Inter, Arial, sans-serif',
         fontSize: '22px',
@@ -31,6 +33,7 @@ export class EndScene extends Phaser.Scene {
         fontStyle: '900',
       })
       .setOrigin(0.5);
+    deathsText.setResolution(2);
 
     const replay = this.add.graphics();
     replay.fillStyle(0xdc2626, 1);
@@ -41,7 +44,7 @@ export class EndScene extends Phaser.Scene {
     replay.strokeRoundedRect(GAME_WIDTH / 2 - 80, 216, 160, 42, 3);
     replay.setInteractive(new Phaser.Geom.Rectangle(GAME_WIDTH / 2 - 86, 210, 172, 54), Phaser.Geom.Rectangle.Contains);
 
-    this.add
+    const replayText = this.add
       .text(GAME_WIDTH / 2, 237, 'REPLAY', {
         fontFamily: '"Arial Black", Impact, Inter, Arial, sans-serif',
         fontSize: '21px',
@@ -51,8 +54,10 @@ export class EndScene extends Phaser.Scene {
         strokeThickness: 4,
       })
       .setOrigin(0.5);
+    replayText.setResolution(2);
 
     replay.on('pointerdown', () => {
+      AudioSystem.sfx('ui');
       this.scene.start('GameScene', { levelIndex: 0, deaths: 0 });
     });
 

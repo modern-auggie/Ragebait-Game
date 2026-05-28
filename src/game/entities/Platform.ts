@@ -83,6 +83,52 @@ export class Platform {
     });
   }
 
+  moveTo(x: number, y: number, duration = 360): void {
+    const state = { x: this.visual.x, y: this.visual.y };
+    this.scene.tweens.add({
+      targets: state,
+      x,
+      y,
+      duration,
+      ease: 'Cubic.Out',
+      onUpdate: () => this.setPosition(state.x, state.y),
+      onComplete: () => this.setPosition(x, y),
+    });
+  }
+
+  resizeTo(x: number, y: number, width: number, height: number, duration = 360): void {
+    const state = { x: this.def.x, y: this.def.y, w: this.def.w, h: this.def.h };
+    this.scene.tweens.add({
+      targets: state,
+      x,
+      y,
+      w: width,
+      h: height,
+      duration,
+      ease: 'Cubic.Out',
+      onUpdate: () => this.setRect(state.x, state.y, state.w, state.h),
+      onComplete: () => this.setRect(x, y, width, height),
+    });
+  }
+
+  setPosition(x: number, y: number): void {
+    this.setRect(x, y, this.def.w, this.def.h);
+  }
+
+  setRect(x: number, y: number, width: number, height: number): void {
+    this.def.x = x;
+    this.def.y = y;
+    this.def.w = width;
+    this.def.h = height;
+    this.visual.setPosition(x, y);
+    this.zone.setPosition(x + width / 2, y + height / 2);
+    this.zone.setSize(width, height);
+    const body = this.zone.body as Phaser.Physics.Arcade.StaticBody;
+    body.setSize(width, height);
+    body.updateFromGameObject();
+    this.draw(this.visual.alpha);
+  }
+
   destroy(): void {
     this.visual.destroy();
     this.zone.destroy();

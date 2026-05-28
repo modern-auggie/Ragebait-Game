@@ -69,6 +69,30 @@ export class Spike {
     });
   }
 
+  moveTo(x: number, y: number, duration = 360): void {
+    const state = { x: this.visual.x, y: this.visual.y };
+    const body = this.zone.body as Phaser.Physics.Arcade.StaticBody;
+    body.enable = true;
+    this.hidden = false;
+    this.visual.setVisible(true).setAlpha(1);
+    this.scene.tweens.add({
+      targets: state,
+      x,
+      y,
+      duration,
+      ease: 'Cubic.Out',
+      onUpdate: () => this.setPosition(state.x, state.y),
+      onComplete: () => this.setPosition(x, y),
+    });
+  }
+
+  setPosition(x: number, y: number): void {
+    this.visual.setPosition(x, y);
+    this.zone.setPosition(x + this.zone.width / 2, y + this.zone.height / 2);
+    const body = this.zone.body as Phaser.Physics.Arcade.StaticBody;
+    body.updateFromGameObject();
+  }
+
   destroy(): void {
     this.visual.destroy();
     this.zone.destroy();

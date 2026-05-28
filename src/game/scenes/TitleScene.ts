@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { drawBackground } from '../systems/Effects';
+import { AudioSystem } from '../systems/AudioSystem';
+import { GameProgress } from '../systems/GameProgress';
 
 export class TitleScene extends Phaser.Scene {
   constructor() {
@@ -21,44 +23,22 @@ export class TitleScene extends Phaser.Scene {
         strokeThickness: 10,
       })
       .setOrigin(0.5);
+    title.setResolution(2);
 
     const subtitle = this.add
-      .text(GAME_WIDTH / 2, 148, 'Round 1: five floor crimes.', {
+      .text(GAME_WIDTH / 2, 150, 'Pick a level. Beat five rounds. Lower your deaths.', {
         fontFamily: '"Arial Black", Impact, Inter, Arial, sans-serif',
         fontSize: '16px',
         color: '#fecaca',
         fontStyle: '800',
       })
       .setOrigin(0.5);
+    subtitle.setResolution(2);
 
-    const start = this.add.graphics();
-    start.fillStyle(0x050104, 0.65);
-    start.fillRoundedRect(GAME_WIDTH / 2 - 86, 207, 172, 58, 6);
-    start.fillStyle(0xdc2626, 1);
-    start.fillRoundedRect(GAME_WIDTH / 2 - 90, 200, 172, 58, 6);
-    start.lineStyle(3, 0x050104, 0.95);
-    start.strokeRoundedRect(GAME_WIDTH / 2 - 90, 200, 172, 58, 6);
-    start.lineStyle(1, 0xffd7d7, 0.55);
-    start.strokeRoundedRect(GAME_WIDTH / 2 - 84, 206, 160, 46, 3);
-    start.setInteractive(new Phaser.Geom.Rectangle(GAME_WIDTH / 2 - 90, 200, 172, 58), Phaser.Geom.Rectangle.Contains);
-
-    const startText = this.add
-      .text(GAME_WIDTH / 2 - 4, 229, 'START', {
-        fontFamily: '"Arial Black", Impact, Inter, Arial, sans-serif',
-        fontSize: '21px',
-        color: '#fee2e2',
-        fontStyle: '900',
-        stroke: '#450a0a',
-        strokeThickness: 4,
-      })
-      .setOrigin(0.5);
-
-    start.on('pointerdown', () => {
-      this.scene.start('GameScene', { levelIndex: 0, deaths: 0 });
-    });
+    this.createLevelButtons();
 
     this.tweens.add({
-      targets: [title, subtitle, start, startText],
+      targets: [title, subtitle],
       y: '+=8',
       duration: 1600,
       yoyo: true,
@@ -84,6 +64,63 @@ export class TitleScene extends Phaser.Scene {
         delay: Phaser.Math.Between(0, 2800),
         ease: 'Linear',
       });
+    }
+  }
+
+  private createLevelButtons(): void {
+    const progress = GameProgress.get();
+    const startX = 126;
+    const y = 226;
+    const gap = 166;
+    for (let level = 1; level <= 5; level += 1) {
+      const x = startX + (level - 1) * gap;
+      const unlocked = GameProgress.isUnlocked(level);
+      const best = progress.bestDeaths[String(level)];
+      const button = this.add.graphics();
+      button.fillStyle(0x050104, 0.65);
+      button.fillRoundedRect(x - 61, y + 6, 122, 112, 6);
+      button.fillStyle(unlocked ? 0xdc2626 : 0x2a1217, 1);
+      button.fillRoundedRect(x - 64, y, 122, 112, 6);
+      button.lineStyle(4, 0x050104, 0.96);
+      button.strokeRoundedRect(x - 64, y, 122, 112, 6);
+      button.lineStyle(1, unlocked ? 0xffd7d7 : 0x7f1d1d, 0.45);
+      button.strokeRoundedRect(x - 56, y + 8, 106, 96, 3);
+
+      const label = this.add
+        .text(x - 3, y + 32, `LEVEL ${level}`, {
+          fontFamily: '"Arial Black", Impact, Inter, Arial, sans-serif',
+          fontSize: '18px',
+          color: unlocked ? '#fee2e2' : '#9f7c7c',
+          stroke: '#450a0a',
+          strokeThickness: 4,
+        })
+        .setOrigin(0.5);
+      label.setResolution(2);
+
+      const sub = this.add
+        .text(x - 3, y + 72, unlocked ? (best === undefined ? 'NO SCORE' : `BEST ${best}`) : 'LOCKED', {
+          fontFamily: '"Arial Black", Impact, Inter, Arial, sans-serif',
+          fontSize: '13px',
+          color: unlocked ? '#fecaca' : '#7f5d5d',
+          align: 'center',
+        })
+        .setOrigin(0.5);
+      sub.setResolution(2);
+
+      if (!unlocked) {
+        const lock = this.add.graphics();
+        lock.fillStyle(0x9f7c7c, 0.72);
+        lock.fillRoundedRect(x - 14, y + 78, 22, 18, 3);
+        lock.lineStyle(3, 0x9f7c7c, 0.72);
+        lock.strokeRoundedRect(x - 10, y + 65, 14, 18, 7);
+      } else {
+        button.setInteractive(new Phaser.Geom.Rectangle(x - 64, y, 122, 112), Phaser.Geom.Rectangle.Contains);
+        button.on('pointerdown', () => {
+          AudioSystem.sfx('ui');
+          AudioSystem.startMusic();
+          this.scene.start('GameScene', { levelIndex: (level - 1) * 5, deaths: 0 });
+        });
+      }
     }
   }
 }

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { TouchControls } from './TouchControls';
+import { GameSettings, type ControlMode } from './GameSettings';
 
 export interface InputState {
   left: boolean;
@@ -16,7 +17,7 @@ export class InputController {
   private lastRestartDown = false;
 
   constructor(private scene: Phaser.Scene) {
-    this.touch = new TouchControls(scene);
+    this.touch = new TouchControls(scene, GameSettings.get().controlMode);
     const keyboard = scene.input.keyboard;
     if (!keyboard) {
       throw new Error('Keyboard input is unavailable.');
@@ -49,5 +50,9 @@ export class InputController {
 
   destroy(): void {
     this.touch.destroy();
+  }
+
+  setControlMode(mode: ControlMode): void {
+    this.touch.rebuild(mode);
   }
 }
