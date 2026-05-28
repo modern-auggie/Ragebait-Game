@@ -6,6 +6,7 @@ export class Hud {
   private readonly deathText: Phaser.GameObjects.Text;
   private readonly messageText: Phaser.GameObjects.Text;
   private readonly items: Phaser.GameObjects.GameObject[] = [];
+  private messageClearEvent?: Phaser.Time.TimerEvent;
 
   constructor(
     private scene: Phaser.Scene,
@@ -65,21 +66,42 @@ export class Hud {
   }
 
   showMessage(message: string, duration = 1300): void {
+    this.messageClearEvent?.remove(false);
     this.messageText.setText(message);
     this.scene.tweens.killTweensOf(this.messageText);
-    this.messageText.setAlpha(0).setY(74);
+    this.messageText.setAlpha(0).setY(74).setScale(1);
     this.scene.tweens.add({
       targets: this.messageText,
       alpha: 1,
       y: 68,
       duration: 130,
       ease: 'Sine.Out',
-      yoyo: true,
-      hold: duration,
+      onComplete: () => {
+        this.messageClearEvent = this.scene.time.delayedCall(duration, () => this.clearMessage(true));
+      },
+    });
+  }
+
+  clearMessage(animated = false): void {
+    this.messageClearEvent?.remove(false);
+    this.messageClearEvent = undefined;
+    this.scene.tweens.killTweensOf(this.messageText);
+    if (!animated) {
+      this.messageText.setText('').setAlpha(0).setY(74).setScale(1);
+      return;
+    }
+    this.scene.tweens.add({
+      targets: this.messageText,
+      alpha: 0,
+      y: 62,
+      duration: 180,
+      ease: 'Sine.In',
+      onComplete: () => this.messageText.setText('').setY(74).setScale(1),
     });
   }
 
   destroy(): void {
+    this.messageClearEvent?.remove(false);
     this.items.forEach((item) => item.destroy());
   }
 

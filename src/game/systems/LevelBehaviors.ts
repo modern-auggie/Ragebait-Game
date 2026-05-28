@@ -252,7 +252,7 @@ export class LevelBehaviors {
   }
 
   private updateR24(): void {
-    if (this.r24Started || this.host.playerX() < 310) return;
+    if (this.r24Started || this.host.playerX() < 285) return;
     this.r24Started = true;
     [
       'stair-chase-1',
@@ -263,8 +263,10 @@ export class LevelBehaviors {
       'stair-chase-6',
       'stair-chase-7',
       'stair-chase-8',
+      'stair-chase-9',
+      'stair-chase-10',
     ].forEach((id, index) => {
-      this.scene.time.delayedCall(index * 190, () => this.findSpike(id)?.reveal());
+      this.scene.time.delayedCall(index * 460, () => this.findSpike(id)?.reveal());
     });
     this.host.showMessage('Move.', 700);
     this.trapFeedback();
