@@ -19,6 +19,11 @@ interface BehaviorHost {
 export class LevelBehaviors {
   private fakeVictoryTriggered = false;
   private movingDoorTriggered = false;
+  private doubleDropTriggered = false;
+  private leftChaseTriggered = false;
+  private secretGapTriggered = false;
+  private rightChaseTriggered = false;
+  private finaleTriggered = false;
 
   constructor(
     private scene: Phaser.Scene,
@@ -31,9 +36,29 @@ export class LevelBehaviors {
     if (this.level.behavior === 'movingDoor') {
       this.updateMovingDoor();
     }
+    if (this.level.behavior === 'round1GapChasesLeft') {
+      this.updateGapChasesLeft();
+    }
+    if (this.level.behavior === 'round1SecretGapChasesRight') {
+      this.updateSecretGapChasesRight();
+    }
+    if (this.level.behavior === 'round1Finale') {
+      this.updateFinale();
+    }
   }
 
   onPlatformTouched(platform: Platform): void {
+    if (this.level.behavior === 'round1DropNearDoor' && platform.id === 'door-drop') {
+      platform.drop(90);
+      this.host.shake(0.004, 90);
+      return;
+    }
+
+    if (this.level.behavior === 'round1DoubleDrop' && (platform.id === 'drop-one' || platform.id === 'drop-two')) {
+      this.triggerDoubleDrop();
+      return;
+    }
+
     if (platform.kind === 'fake') {
       platform.drop(80);
       this.host.shake(0.004, 90);
@@ -108,6 +133,52 @@ export class LevelBehaviors {
     });
     this.host.showMessage('Nope.', 900);
     this.host.shake(0.004, 120);
+  }
+
+  private triggerDoubleDrop(): void {
+    if (this.doubleDropTriggered) return;
+    this.doubleDropTriggered = true;
+    this.findPlatform('drop-one')?.drop(70);
+    this.findPlatform('drop-two')?.drop(260);
+    this.host.shake(0.005, 110);
+  }
+
+  private updateGapChasesLeft(): void {
+    if (this.leftChaseTriggered || this.host.playerX() < 286) return;
+    this.leftChaseTriggered = true;
+    this.host.showMessage('It moves.', 850);
+    this.findPlatform('chase-left-3')?.drop(40);
+    this.findPlatform('chase-left-2')?.drop(130);
+    this.findPlatform('chase-left-1')?.drop(220);
+    this.host.shake(0.006, 140);
+  }
+
+  private updateSecretGapChasesRight(): void {
+    const x = this.host.playerX();
+    if (!this.secretGapTriggered && x > 240) {
+      this.secretGapTriggered = true;
+      this.findPlatform('secret-gap')?.drop(60);
+      this.host.showMessage('Surprise.', 800);
+      this.host.shake(0.006, 130);
+    }
+
+    if (!this.rightChaseTriggered && x > 470) {
+      this.rightChaseTriggered = true;
+      this.findPlatform('right-chase-1')?.drop(30);
+      this.findPlatform('right-chase-2')?.drop(110);
+      this.findPlatform('right-chase-3')?.drop(190);
+      this.host.shake(0.007, 180);
+    }
+  }
+
+  private updateFinale(): void {
+    if (this.finaleTriggered || this.host.playerX() < 390) return;
+    this.finaleTriggered = true;
+    this.findPlatform('final-1')?.drop(50);
+    this.findPlatform('final-2')?.drop(150);
+    this.findPlatform('final-3')?.drop(250);
+    this.host.showMessage('Run.', 750);
+    this.host.shake(0.007, 180);
   }
 
   private triggerFakeVictory(door: Door): void {

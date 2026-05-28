@@ -23,7 +23,7 @@ export class TitleScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const subtitle = this.add
-      .text(GAME_WIDTH / 2, 148, '8 tiny levels. 1 big attitude.', {
+      .text(GAME_WIDTH / 2, 148, 'Round 1: five floor crimes.', {
         fontFamily: '"Arial Black", Impact, Inter, Arial, sans-serif',
         fontSize: '16px',
         color: '#fecaca',

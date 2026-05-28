@@ -33,9 +33,37 @@ export class Platform {
   draw(alpha = 1): void {
     const fill = this.kind === 'fakeWall' ? COLORS.fakeWall : this.def.tint ?? COLORS.platform;
     const stroke = this.kind === 'fakeWall' ? 0x94a3b8 : COLORS.platformEdge;
+    if (this.def.h >= 64 && this.kind !== 'fakeWall') {
+      this.drawSeamlessGround(fill, stroke, alpha);
+      return;
+    }
     drawRoundedBlock(this.visual, this.def.w, this.def.h, fill, stroke, 5, alpha);
     if (this.kind === 'fakeWall') {
       this.visual.setAlpha(0.86);
+    }
+  }
+
+  private drawSeamlessGround(fill: number, stroke: number, alpha: number): void {
+    const { w, h } = this.def;
+    this.visual.clear();
+    this.visual.fillStyle(0x000000, 0.45 * alpha);
+    this.visual.fillRect(0, 6, w, h);
+    this.visual.fillStyle(COLORS.platformDark, alpha);
+    this.visual.fillRect(0, 3, w, h);
+    this.visual.fillStyle(fill, alpha);
+    this.visual.fillRect(0, 0, w, h);
+    this.visual.fillStyle(0xffd7d7, 0.24 * alpha);
+    this.visual.fillRect(0, 5, w, 11);
+    this.visual.fillStyle(0x050104, 0.22 * alpha);
+    this.visual.fillRect(0, h - 9, w, 4);
+    this.visual.lineStyle(3, 0x050104, 0.98 * alpha);
+    this.visual.lineBetween(0, 0, w, 0);
+    this.visual.lineBetween(0, h, w, h);
+    this.visual.lineStyle(1, stroke, 0.45 * alpha);
+    this.visual.lineBetween(0, 3, w, 3);
+    this.visual.lineStyle(1, 0x050104, 0.16 * alpha);
+    for (let x = 18; x < w; x += 34) {
+      this.visual.lineBetween(x, 17, x - 8, h - 10);
     }
   }
 

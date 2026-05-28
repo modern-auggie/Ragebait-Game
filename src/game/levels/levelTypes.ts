@@ -1,4 +1,9 @@
 export type LevelBehaviorId =
+  | 'round1DropNearDoor'
+  | 'round1DoubleDrop'
+  | 'round1GapChasesLeft'
+  | 'round1SecretGapChasesRight'
+  | 'round1Finale'
   | 'fakeFloorNearDoor'
   | 'jumpRevealsSpikes'
   | 'disappearingFloor'
