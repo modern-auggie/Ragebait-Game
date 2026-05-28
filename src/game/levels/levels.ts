@@ -8,7 +8,7 @@ const DOOR = { kind: 'real' as const, x: 884, y: 320, w: 38, h: 70, open: true }
 const round1: LevelDefinition[] = [
   {
     id: 'level-1-1',
-    name: '1.1: Doorstep',
+    name: '1.1',
     behavior: 'round1DropNearDoor',
     spawn: SPAWN,
     platforms: [
@@ -22,7 +22,7 @@ const round1: LevelDefinition[] = [
   },
   {
     id: 'level-1-2',
-    name: '1.2: Double Drop',
+    name: '1.2',
     behavior: 'round1DoubleDrop',
     spawn: SPAWN,
     platforms: [
@@ -38,7 +38,7 @@ const round1: LevelDefinition[] = [
   },
   {
     id: 'level-1-3',
-    name: '1.3: Moving Gap',
+    name: '1.3',
     behavior: 'round1GapChasesLeft',
     spawn: SPAWN,
     platforms: [
@@ -51,7 +51,7 @@ const round1: LevelDefinition[] = [
   },
   {
     id: 'level-1-4',
-    name: '1.4: Secret Gap',
+    name: '1.4',
     behavior: 'round1SecretGapChasesRight',
     spawn: SPAWN,
     platforms: [
@@ -69,7 +69,7 @@ const round1: LevelDefinition[] = [
   },
   {
     id: 'level-1-5',
-    name: '1.5: Split Step',
+    name: '1.5',
     behavior: 'round1Finale',
     spawn: SPAWN,
     platforms: [
@@ -89,7 +89,7 @@ const round1: LevelDefinition[] = [
 const round2: LevelDefinition[] = [
   {
     id: 'level-2-1',
-    name: '2.1: Shy Spike',
+    name: '2.1',
     behavior: 'round2SpikeBait',
     spawn: { x: 62, y: 196 },
     platforms: [
@@ -105,7 +105,7 @@ const round2: LevelDefinition[] = [
   },
   {
     id: 'level-2-2',
-    name: '2.2: Three Opinions',
+    name: '2.2',
     behavior: 'round2TripleSpikes',
     spawn: SPAWN,
     platforms: [{ id: 'floor', x: 0, y: FLOOR_Y, w: 960, h: FLOOR_H }],
@@ -119,7 +119,7 @@ const round2: LevelDefinition[] = [
   },
   {
     id: 'level-2-3',
-    name: '2.3: Wrong Shaft',
+    name: '2.3',
     behavior: 'round2ShaftSpikeSwap',
     spawn: { x: 480, y: 196 },
     platforms: [
@@ -137,7 +137,7 @@ const round2: LevelDefinition[] = [
   },
   {
     id: 'level-2-4',
-    name: '2.4: Stair Panic',
+    name: '2.4',
     behavior: 'round2StairChase',
     spawn: { x: 62, y: 356 },
     platforms: [
@@ -160,7 +160,7 @@ const round2: LevelDefinition[] = [
   },
   {
     id: 'level-2-5',
-    name: '2.5: Crawl Rush',
+    name: '2.5',
     behavior: 'round2CrawlRush',
     spawn: { x: 900, y: 356 },
     platforms: [
@@ -182,7 +182,7 @@ const round2: LevelDefinition[] = [
 const blankLevels: LevelDefinition[] = [3, 4, 5].flatMap((level) =>
   [1, 2, 3, 4, 5].map((round) => ({
     id: `level-${level}-${round}`,
-    name: `${level}.${round}: Placeholder`,
+    name: `${level}.${round}`,
     behavior: 'blank' as const,
     spawn: SPAWN,
     platforms: [{ id: 'floor', x: 0, y: FLOOR_Y, w: 960, h: FLOOR_H }],

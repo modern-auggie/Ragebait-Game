@@ -3,6 +3,7 @@ import { GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { drawBackground } from '../systems/Effects';
 import { AudioSystem } from '../systems/AudioSystem';
 import { GameProgress } from '../systems/GameProgress';
+import { LEVELS } from '../levels/levels';
 
 export class TitleScene extends Phaser.Scene {
   constructor() {
@@ -76,6 +77,17 @@ export class TitleScene extends Phaser.Scene {
       const x = startX + (level - 1) * gap;
       const unlocked = GameProgress.isUnlocked(level);
       const best = progress.bestDeaths[String(level)];
+      const resume = GameProgress.getResumeForLevel(level);
+      const firstRound = (level - 1) * 5;
+      const resumedRound = LEVELS[resume.levelIndex]?.name ?? `${level}.1`;
+      const subLabel =
+        unlocked && GameProgress.hasResumeForLevel(level) && resume.levelIndex > firstRound
+          ? `ROUND ${resumedRound}`
+          : unlocked
+            ? best === undefined
+              ? 'START'
+              : `BEST ${best}`
+            : 'LOCKED';
       const button = this.add.graphics();
       button.fillStyle(0x050104, 0.65);
       button.fillRoundedRect(x - 61, y + 6, 122, 112, 6);
@@ -98,7 +110,7 @@ export class TitleScene extends Phaser.Scene {
       label.setResolution(2);
 
       const sub = this.add
-        .text(x - 3, y + 72, unlocked ? (best === undefined ? 'NO SCORE' : `BEST ${best}`) : 'LOCKED', {
+        .text(x - 3, y + 72, subLabel, {
           fontFamily: '"Arial Black", Impact, Inter, Arial, sans-serif',
           fontSize: '13px',
           color: unlocked ? '#fecaca' : '#7f5d5d',
@@ -118,7 +130,8 @@ export class TitleScene extends Phaser.Scene {
         button.on('pointerdown', () => {
           AudioSystem.sfx('ui');
           AudioSystem.startMusic();
-          this.scene.start('GameScene', { levelIndex: (level - 1) * 5, deaths: 0 });
+          const latest = GameProgress.getResumeForLevel(level);
+          this.scene.start('GameScene', { levelIndex: latest.levelIndex, deaths: latest.deaths });
         });
       }
     }
