@@ -72,6 +72,15 @@ export class GameProgress {
     }
     saveProgress(this.state);
   }
+
+  static resetAll(): void {
+    this.state = {
+      unlockedLevel: DEFAULT_PROGRESS.unlockedLevel,
+      bestDeaths: {},
+      resumes: {},
+    };
+    saveProgress(this.state);
+  }
 }
 
 function loadProgress(): GameProgressState {

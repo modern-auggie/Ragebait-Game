@@ -252,21 +252,13 @@ export class LevelBehaviors {
   }
 
   private updateR24(): void {
-    if (this.r24Started || this.host.playerX() < 285) return;
+    if (this.r24Started || this.host.playerX() < 372) return;
     this.r24Started = true;
-    [
-      'stair-chase-1',
-      'stair-chase-2',
-      'stair-chase-3',
-      'stair-chase-4',
-      'stair-chase-5',
-      'stair-chase-6',
-      'stair-chase-7',
-      'stair-chase-8',
-      'stair-chase-9',
-      'stair-chase-10',
-    ].forEach((id, index) => {
-      this.scene.time.delayedCall(index * 460, () => this.findSpike(id)?.reveal());
+    const chaseSpikes = this.loaded.spikes
+      .filter((spike) => spike.id.startsWith('stair-chase-'))
+      .sort((a, b) => spikeIndex(a.id) - spikeIndex(b.id));
+    chaseSpikes.forEach((spike, index) => {
+      this.scene.time.delayedCall(index * 240, () => spike.reveal());
     });
     this.host.showMessage('Move.', 700);
     this.trapFeedback();
@@ -274,27 +266,27 @@ export class LevelBehaviors {
 
   private updateR25(): void {
     const x = this.host.playerX();
-    if (this.r25Stage === 0 && x < 500) {
+    if (this.r25Stage === 0 && x < 530) {
       this.r25Stage = 1;
-      this.findSpike('rush-one')?.moveTo(900, 358, 2350, 'Linear');
+      this.findSpike('rush-one')?.moveTo(986, 358, 2500, 'Linear');
       this.host.showMessage('Hide.', 650);
       this.trapFeedback();
     }
     if (this.r25Stage === 1 && x > 780) {
       this.r25Stage = 2;
     }
-    if (this.r25Stage === 2 && x < 500) {
+    if (this.r25Stage === 2 && x < 530) {
       this.r25Stage = 3;
-      this.findSpike('rush-two')?.moveTo(900, 358, 2300, 'Linear');
+      this.findSpike('rush-two')?.moveTo(986, 358, 2750, 'Linear');
       this.host.showMessage('Again.', 650);
       this.trapFeedback();
     }
     if (this.r25Stage === 3 && x > 780) {
       this.r25Stage = 4;
     }
-    if (this.r25Stage === 4 && x < 500) {
+    if (this.r25Stage === 4 && x < 530) {
       this.r25Stage = 5;
-      this.findSpike('rush-three')?.moveTo(82, 358, 2550, 'Linear');
+      this.findSpike('rush-three')?.moveTo(-84, 358, 2850, 'Linear');
       this.host.showMessage('Door. Now.', 650);
       this.trapFeedback();
     }
@@ -372,4 +364,8 @@ export class LevelBehaviors {
 
 function pointInRect(x: number, y: number, rect: RectDef): boolean {
   return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
+}
+
+function spikeIndex(id: string): number {
+  return Number(id.replace('stair-chase-', '')) || 0;
 }

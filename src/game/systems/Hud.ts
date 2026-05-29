@@ -11,7 +11,9 @@ export class Hud {
   constructor(
     private scene: Phaser.Scene,
     actions: { onRestart: () => void; onHome: () => void; onSettings: () => void },
+    options: { showDeaths?: boolean } = {},
   ) {
+    const showDeaths = options.showDeaths ?? true;
     this.levelText = scene.add
       .text(20, 18, 'Level 1', {
         fontFamily: '"Arial Black", Impact, Inter, Arial, sans-serif',
@@ -33,12 +35,13 @@ export class Hud {
         fontStyle: '800',
       })
       .setDepth(100)
-      .setScrollFactor(0);
+      .setScrollFactor(0)
+      .setVisible(showDeaths);
     this.deathText.setResolution(2);
 
-    this.createHudButton(GAME_WIDTH - 258, 18, 74, 'HOME', actions.onHome);
-    this.createHudButton(GAME_WIDTH - 176, 18, 74, 'SET', actions.onSettings);
-    this.createHudButton(GAME_WIDTH - 94, 18, 74, 'R', actions.onRestart);
+    this.createHudButton(GAME_WIDTH - 196, 16, 54, 42, 'home', actions.onHome);
+    this.createHudButton(GAME_WIDTH - 130, 16, 54, 42, 'settings', actions.onSettings);
+    this.createHudButton(GAME_WIDTH - 64, 16, 54, 42, 'restart', actions.onRestart);
 
     this.messageText = scene.add
       .text(GAME_WIDTH / 2, 74, '', {
@@ -105,30 +108,73 @@ export class Hud {
     this.items.forEach((item) => item.destroy());
   }
 
-  private createHudButton(x: number, y: number, width: number, label: string, onClick: () => void): void {
+  private createHudButton(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    icon: 'home' | 'settings' | 'restart',
+    onClick: () => void,
+  ): void {
     const panel = this.scene.add.graphics();
     panel.setDepth(100);
     panel.setScrollFactor(0);
     panel.fillStyle(0x1f070b, 0.88);
-    panel.fillRoundedRect(x, y, width, 34, 4);
+    panel.fillRoundedRect(x, y, width, height, 4);
     panel.lineStyle(3, 0x050104, 0.9);
-    panel.strokeRoundedRect(x, y, width, 34, 4);
+    panel.strokeRoundedRect(x, y, width, height, 4);
     panel.lineStyle(1, 0xffd7d7, 0.28);
-    panel.strokeRoundedRect(x + 5, y + 5, width - 10, 24, 2);
-    panel.setInteractive(new Phaser.Geom.Rectangle(x, y, width, 34), Phaser.Geom.Rectangle.Contains);
+    panel.strokeRoundedRect(x + 6, y + 6, width - 12, height - 12, 2);
+    panel.setInteractive(new Phaser.Geom.Rectangle(x, y, width, height), Phaser.Geom.Rectangle.Contains);
     panel.on('pointerdown', onClick);
 
-    const text = this.scene.add
-      .text(x + width / 2, y + 17, label, {
-        fontFamily: '"Arial Black", Impact, Inter, Arial, sans-serif',
-        fontSize: label.length > 1 ? '13px' : '17px',
-        color: '#fee2e2',
-        fontStyle: '900',
-      })
-      .setOrigin(0.5)
-      .setDepth(101)
-      .setScrollFactor(0);
-    text.setResolution(2);
-    this.items.push(panel, text);
+    const iconGraphic = this.scene.add.graphics();
+    iconGraphic.setDepth(101);
+    iconGraphic.setScrollFactor(0);
+    drawHudIcon(iconGraphic, x + width / 2, y + height / 2, icon);
+    this.items.push(panel, iconGraphic);
   }
+}
+
+function drawHudIcon(graphics: Phaser.GameObjects.Graphics, cx: number, cy: number, icon: 'home' | 'settings' | 'restart'): void {
+  graphics.clear();
+  graphics.lineStyle(3, 0xfee2e2, 1);
+  graphics.fillStyle(0xfee2e2, 1);
+
+  if (icon === 'home') {
+    graphics.fillTriangle(cx - 14, cy - 1, cx, cy - 14, cx + 14, cy - 1);
+    graphics.fillRect(cx - 10, cy - 1, 20, 14);
+    graphics.fillStyle(0x1f070b, 1);
+    graphics.fillRect(cx - 3, cy + 5, 6, 8);
+    return;
+  }
+
+  if (icon === 'settings') {
+    drawSliderIcon(graphics, cx, cy);
+    return;
+  }
+
+  graphics.lineStyle(4, 0xfee2e2, 1);
+  graphics.beginPath();
+  graphics.arc(cx, cy, 11, Phaser.Math.DegToRad(42), Phaser.Math.DegToRad(324), false);
+  graphics.strokePath();
+  graphics.fillTriangle(cx + 13, cy - 10, cx + 17, cy + 1, cx + 6, cy - 2);
+  graphics.lineBetween(cx - 13, cy + 8, cx - 8, cy + 13);
+}
+
+function drawSliderIcon(graphics: Phaser.GameObjects.Graphics, cx: number, cy: number): void {
+  graphics.lineStyle(3, 0xfee2e2, 1);
+  graphics.fillStyle(0xfee2e2, 1);
+  const rows = [
+    { y: cy - 9, knob: cx - 6 },
+    { y: cy, knob: cx + 7 },
+    { y: cy + 9, knob: cx - 1 },
+  ];
+  rows.forEach((row) => {
+    graphics.lineBetween(cx - 14, row.y, cx + 14, row.y);
+    graphics.fillCircle(row.knob, row.y, 4);
+    graphics.lineStyle(2, 0x1f070b, 1);
+    graphics.strokeCircle(row.knob, row.y, 4);
+    graphics.lineStyle(3, 0xfee2e2, 1);
+  });
 }

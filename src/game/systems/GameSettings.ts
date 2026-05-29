@@ -6,6 +6,7 @@ export interface GameSettingsState {
   sfxEnabled: boolean;
   musicVolume: number;
   sfxVolume: number;
+  devMode: boolean;
 }
 
 const STORAGE_KEY = 'ragebait-v1a-settings';
@@ -16,6 +17,7 @@ const DEFAULT_SETTINGS: GameSettingsState = {
   sfxEnabled: true,
   musicVolume: 72,
   sfxVolume: 82,
+  devMode: false,
 };
 
 export class GameSettings {
@@ -55,6 +57,7 @@ function loadSettings(): GameSettingsState {
       sfxEnabled: (parsed.sfxEnabled ?? DEFAULT_SETTINGS.sfxEnabled) && sfxVolume > 0,
       musicVolume,
       sfxVolume,
+      devMode: parsed.devMode === true,
     };
   } catch {
     return { ...DEFAULT_SETTINGS };

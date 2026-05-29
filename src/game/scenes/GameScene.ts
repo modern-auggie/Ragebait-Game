@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { Player } from '../entities/Player';
 import type { Platform } from '../entities/Platform';
+import type { Spike } from '../entities/Spike';
 import { LEVELS } from '../levels/levels';
 import type { LevelDefinition } from '../levels/levelTypes';
 import { addBurst, COLORS, drawBackground } from '../systems/Effects';
@@ -27,16 +28,19 @@ export class GameScene extends Phaser.Scene {
   private completing = false;
   private background?: Phaser.GameObjects.Graphics;
   private settingsOverlay?: Phaser.GameObjects.Container;
+  private resetConfirmOverlay?: Phaser.GameObjects.Container;
   private transitioning = false;
   private colliders: Phaser.Physics.Arcade.Collider[] = [];
+  private devRun = false;
 
   constructor() {
     super('GameScene');
   }
 
-  create(data: { levelIndex?: number; deaths?: number }): void {
+  create(data: { levelIndex?: number; deaths?: number; devRun?: boolean }): void {
     this.levelIndex = data.levelIndex ?? 0;
-    this.deaths = data.deaths ?? 0;
+    this.devRun = Boolean(data.devRun) || GameSettings.get().devMode;
+    this.deaths = this.devRun ? 0 : data.deaths ?? 0;
     this.currentLevelGroup = Math.floor(this.levelIndex / 5) + 1;
     this.physics.world.setBounds(0, 0, GAME_WIDTH, GAME_HEIGHT);
     this.cameras.main.roundPixels = true;
@@ -46,6 +50,8 @@ export class GameScene extends Phaser.Scene {
       onRestart: () => this.restartLevel(false),
       onHome: () => this.goHome(),
       onSettings: () => this.toggleSettings(),
+    }, {
+      showDeaths: !this.devRun,
     });
     AudioSystem.startMusic();
     this.startLevel(this.levelIndex);
@@ -86,9 +92,11 @@ export class GameScene extends Phaser.Scene {
   killPlayer(message?: string): void {
     if (!this.player || this.dead || this.completing) return;
     this.dead = true;
-    this.deaths += 1;
-    this.hud?.setDeaths(this.deaths);
-    GameProgress.setResume(this.currentLevelGroup, this.levelIndex, this.deaths);
+    if (!this.devRun) {
+      this.deaths += 1;
+      this.hud?.setDeaths(this.deaths);
+      GameProgress.setResume(this.currentLevelGroup, this.levelIndex, this.deaths);
+    }
     const x = this.player.sprite.x;
     const y = this.player.sprite.y;
     this.player.kill();
@@ -96,8 +104,9 @@ export class GameScene extends Phaser.Scene {
     AudioSystem.sfx('death');
     this.cameras.main.flash(110, 220, 38, 38, false);
     this.shake(0.018, 230);
-    this.hud?.showMessage(message ?? this.randomDeathMessage(), 1000);
-    this.time.delayedCall(460, () => this.restartLevel(true));
+    const deathMessage = message ?? this.randomDeathMessage();
+    this.hud?.showMessage(deathMessage, 900);
+    this.time.delayedCall(460, () => this.restartLevel(true, deathMessage));
   }
 
   completeLevel(): void {
@@ -110,13 +119,19 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.flash(190, 255, 211, 109, false);
     this.time.delayedCall(180, () => {
       if (this.levelIndex >= LEVELS.length - 1) {
-        GameProgress.recordLevelComplete(this.currentLevelGroup, this.deaths);
-        this.showRoundTransition(undefined, () => this.scene.start('EndScene', { deaths: this.deaths }));
+        if (!this.devRun) {
+          GameProgress.recordLevelComplete(this.currentLevelGroup, this.deaths);
+        }
+        this.showRoundTransition(undefined, () =>
+          this.scene.start(this.devRun ? 'TitleScene' : 'EndScene', { deaths: this.deaths }),
+        );
       } else {
         const nextIndex = this.levelIndex + 1;
         const nextLevelGroup = Math.floor(nextIndex / 5) + 1;
         if (nextLevelGroup !== this.currentLevelGroup) {
-          GameProgress.recordLevelComplete(this.currentLevelGroup, this.deaths);
+          if (!this.devRun) {
+            GameProgress.recordLevelComplete(this.currentLevelGroup, this.deaths);
+          }
           this.showRoundTransition(undefined, () => this.scene.start('TitleScene'), `LEVEL ${this.currentLevelGroup} COMPLETE`);
           return;
         }
@@ -150,18 +165,23 @@ export class GameScene extends Phaser.Scene {
     this.player = new Player(this, this.currentLevel.spawn.x, this.currentLevel.spawn.y);
     this.behaviors = new LevelBehaviors(this, this, this.currentLevel, this.loaded);
     this.hud?.setLevel(this.currentLevel.name);
-    this.hud?.setDeaths(this.deaths);
-    GameProgress.setResume(this.currentLevelGroup, this.levelIndex, this.deaths);
+    if (!this.devRun) {
+      this.hud?.setDeaths(this.deaths);
+      GameProgress.setResume(this.currentLevelGroup, this.levelIndex, this.deaths);
+    }
     this.addPhysics();
     this.cameras.main.fadeIn(130, 7, 10, 20);
   }
 
-  private restartLevel(fromDeath: boolean): void {
+  private restartLevel(fromDeath: boolean, message?: string): void {
+    this.hud?.clearMessage();
+    this.startLevel(this.levelIndex);
     if (!fromDeath) {
       this.hud?.showMessage('Fine. Fresh start.', 700);
       AudioSystem.sfx('ui');
+    } else if (message) {
+      this.hud?.showMessage(message, 2200);
     }
-    this.startLevel(this.levelIndex);
   }
 
   private goHome(): void {
@@ -174,6 +194,8 @@ export class GameScene extends Phaser.Scene {
     this.time.removeAllEvents();
     this.colliders.forEach((collider) => collider.destroy());
     this.colliders = [];
+    this.resetConfirmOverlay?.destroy(true);
+    this.resetConfirmOverlay = undefined;
     this.settingsOverlay?.destroy(true);
     this.settingsOverlay = undefined;
     this.player?.destroy();
@@ -192,7 +214,9 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.loaded.spikes.forEach((spike) => {
-      this.colliders.push(this.physics.add.overlap(sprite, spike.zone, () => this.killPlayer(), undefined, this));
+      this.colliders.push(
+        this.physics.add.overlap(sprite, spike.zone, () => this.killPlayer(this.deathMessageForSpike(spike)), undefined, this),
+      );
     });
 
     this.loaded.doors.forEach((door) => {
@@ -217,6 +241,31 @@ export class GameScene extends Phaser.Scene {
   private randomDeathMessage(): string {
     const messages = this.currentLevel?.deathMessages ?? ['That was educational.'];
     return Phaser.Utils.Array.GetRandom(messages);
+  }
+
+  private deathMessageForSpike(spike: Spike): string {
+    switch (spike.id) {
+      case 'normal-spike':
+      case 'spike-one':
+        return 'That spike was exactly as advertised.';
+      case 'shy-spike':
+        return 'The left spike moved just enough.';
+      case 'spike-two':
+        return 'The middle spike lunged first.';
+      case 'spike-three':
+        return 'The last spike backed away on purpose.';
+      case 'shaft-spike':
+        return 'The shaft spike switched sides.';
+      case 'runner-spike':
+        return 'The runner spike chased you down.';
+      case 'rush-one':
+      case 'rush-two':
+      case 'rush-three':
+        return 'The hole was the hiding spot.';
+      default:
+        if (spike.id.startsWith('stair-chase')) return 'The stairs filled with spikes.';
+        return this.randomDeathMessage();
+    }
   }
 
   private showRoundTransition(nextIndex: number | undefined, onDone: () => void, labelOverride?: string): void {
@@ -336,15 +385,15 @@ export class GameScene extends Phaser.Scene {
     panel.fillStyle(0x050104, 0.78);
     panel.fillRect(-GAME_WIDTH / 2, -GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT);
     panel.fillStyle(0x21060b, 0.98);
-    panel.fillRoundedRect(-230, -146, 460, 292, 6);
+    panel.fillRoundedRect(-250, -206, 500, 412, 6);
     panel.lineStyle(4, 0xff243f, 0.95);
-    panel.strokeRoundedRect(-230, -146, 460, 292, 6);
+    panel.strokeRoundedRect(-250, -206, 500, 412, 6);
     panel.lineStyle(1, 0xffd7d7, 0.35);
-    panel.strokeRoundedRect(-220, -136, 440, 272, 3);
+    panel.strokeRoundedRect(-238, -194, 476, 388, 3);
     container.add(panel);
 
     const title = this.add
-      .text(0, -112, 'SETTINGS', {
+      .text(0, -174, 'SETTINGS', {
         fontFamily: '"Arial Black", Impact, Inter, Arial, sans-serif',
         fontSize: '28px',
         color: '#fee2e2',
@@ -365,14 +414,60 @@ export class GameScene extends Phaser.Scene {
         dynamicItems.pop()?.destroy();
       }
     };
+    let devCode = '';
+    let devFocused = false;
+    let notice = '';
+    let renderControls = (): void => undefined;
 
-    this.addCloseButton(container, 184, -124, () => this.toggleSettings());
+    const unlockDev = (): void => {
+      if (devCode !== '9999') {
+        notice = 'WRONG CODE';
+        devCode = '';
+        AudioSystem.sfx('trap');
+        renderControls();
+        return;
+      }
+      GameSettings.set({ devMode: true });
+      devCode = '';
+      devFocused = false;
+      notice = 'DEV MODE UNLOCKED';
+      AudioSystem.sfx('ui');
+      renderControls();
+    };
 
-    const renderControls = (): void => {
+    const keyHandler = (event: KeyboardEvent): void => {
+      if (!devFocused || GameSettings.get().devMode) return;
+      if (/^\d$/.test(event.key)) {
+        devCode = `${devCode}${event.key}`.slice(-4);
+        notice = '';
+        if (devCode === '9999') {
+          unlockDev();
+        } else {
+          renderControls();
+        }
+        return;
+      }
+      if (event.key === 'Backspace') {
+        devCode = devCode.slice(0, -1);
+        renderControls();
+        return;
+      }
+      if (event.key === 'Enter') {
+        unlockDev();
+      }
+    };
+    this.input.keyboard?.on('keydown', keyHandler);
+    container.once(Phaser.GameObjects.Events.DESTROY, () => {
+      this.input.keyboard?.off('keydown', keyHandler);
+    });
+
+    this.addCloseButton(container, 198, -182, () => this.toggleSettings());
+
+    renderControls = (): void => {
       clearDynamic();
       const settings = GameSettings.get();
       const label = this.add
-        .text(-168, -72, 'CONTROL', {
+        .text(-200, -124, 'CONTROL', {
           fontFamily: '"Arial Black", Impact, Inter, Arial, sans-serif',
           fontSize: '14px',
           color: '#fecaca',
@@ -382,30 +477,168 @@ export class GameScene extends Phaser.Scene {
       label.setResolution(2);
       addDynamic(label);
 
-      this.addModeButton(container, addDynamic, -42, -92, 108, 'BUTTONS', settings.controlMode === 'buttons', () => {
+      this.addModeButton(container, addDynamic, -76, -144, 108, 'BUTTONS', settings.controlMode === 'buttons', () => {
         GameSettings.set({ controlMode: 'buttons' });
         this.inputController?.setControlMode('buttons');
         AudioSystem.sfx('ui');
         renderControls();
       });
-      this.addModeButton(container, addDynamic, 74, -92, 108, 'JOYSTICK', settings.controlMode === 'joystick', () => {
+      this.addModeButton(container, addDynamic, 40, -144, 108, 'JOYSTICK', settings.controlMode === 'joystick', () => {
         GameSettings.set({ controlMode: 'joystick' });
         this.inputController?.setControlMode('joystick');
         AudioSystem.sfx('ui');
         renderControls();
       });
 
-      this.addVolumeSlider(container, addDynamic, -168, -24, 336, 'MUSIC', settings.musicVolume, (value) => {
+      this.addVolumeSlider(container, addDynamic, -200, -84, 400, 'MUSIC', settings.musicVolume, (value) => {
         GameSettings.set({ musicVolume: value });
         AudioSystem.applySettings();
       });
-      this.addVolumeSlider(container, addDynamic, -168, 58, 336, 'SOUND FX', settings.sfxVolume, (value) => {
+      this.addVolumeSlider(container, addDynamic, -200, -14, 400, 'SOUND FX', settings.sfxVolume, (value) => {
         GameSettings.set({ sfxVolume: value });
         AudioSystem.applySettings();
       });
+
+      const devLabel = this.add
+        .text(-200, 66, 'DEV MODE', {
+          fontFamily: '"Arial Black", Impact, Inter, Arial, sans-serif',
+          fontSize: '14px',
+          color: '#fecaca',
+          fontStyle: '900',
+        })
+        .setOrigin(0, 0.5);
+      devLabel.setResolution(2);
+      addDynamic(devLabel);
+
+      const field = this.add.graphics();
+      field.fillStyle(devFocused ? 0x2b0b11 : 0x120307, 1);
+      field.fillRoundedRect(-200, 84, 180, 38, 4);
+      field.lineStyle(3, devFocused ? 0xffd36d : 0x7f1d1d, 0.95);
+      field.strokeRoundedRect(-200, 84, 180, 38, 4);
+      field.setInteractive(new Phaser.Geom.Rectangle(-200, 84, 180, 38), Phaser.Geom.Rectangle.Contains);
+      field.on('pointerdown', () => {
+        devFocused = true;
+        notice = '';
+        AudioSystem.sfx('ui');
+        renderControls();
+      });
+      const fieldText = this.add
+        .text(-110, 103, settings.devMode ? 'DEV MODE ON' : devCode.padEnd(4, '_'), {
+          fontFamily: '"Arial Black", Impact, Inter, Arial, sans-serif',
+          fontSize: '14px',
+          color: settings.devMode ? '#ffd36d' : '#fee2e2',
+          fontStyle: '900',
+        })
+        .setOrigin(0.5);
+      fieldText.setResolution(2);
+      addDynamic(field, fieldText);
+
+      if (!settings.devMode) {
+        this.addActionButton(container, addDynamic, -8, 84, 108, 'UNLOCK', () => unlockDev());
+      } else {
+        this.addActionButton(container, addDynamic, -8, 84, 120, 'TURN OFF', () => {
+          GameSettings.set({ devMode: false });
+          devCode = '';
+          devFocused = false;
+          notice = 'DEV MODE OFF';
+          AudioSystem.sfx('ui');
+          renderControls();
+        });
+      }
+
+      this.addActionButton(container, addDynamic, -200, 148, 180, 'HARD RESET', () => this.showHardResetConfirm(), false, true);
+
+      const noticeText = this.add
+        .text(-8, 146, notice, {
+          fontFamily: '"Arial Black", Impact, Inter, Arial, sans-serif',
+          fontSize: '11px',
+          color: notice === 'WRONG CODE' ? '#ff6b6b' : '#ffd36d',
+          fontStyle: '900',
+          wordWrap: { width: 190 },
+        })
+        .setOrigin(0, 0);
+      noticeText.setResolution(2);
+      addDynamic(noticeText);
     };
     renderControls();
     return container;
+  }
+
+  private showHardResetConfirm(): void {
+    this.resetConfirmOverlay?.destroy(true);
+    const overlay = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2).setDepth(520);
+    this.resetConfirmOverlay = overlay;
+
+    const shade = this.add
+      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x050104, 0.62)
+      .setOrigin(0.5)
+      .setInteractive();
+    const panel = this.add.graphics();
+    panel.fillStyle(0x21060b, 0.98);
+    panel.fillRoundedRect(-190, -96, 380, 192, 6);
+    panel.lineStyle(4, 0xff243f, 0.95);
+    panel.strokeRoundedRect(-190, -96, 380, 192, 6);
+    panel.lineStyle(1, 0xffd7d7, 0.35);
+    panel.strokeRoundedRect(-178, -84, 356, 168, 3);
+
+    const title = this.add
+      .text(0, -48, 'RESET EVERYTHING?', {
+        fontFamily: '"Arial Black", Impact, Inter, Arial, sans-serif',
+        fontSize: '22px',
+        color: '#fee2e2',
+        stroke: '#450a0a',
+        strokeThickness: 5,
+      })
+      .setOrigin(0.5);
+    title.setResolution(2);
+
+    const body = this.add
+      .text(0, -8, 'This erases unlocked levels, best deaths, and dev mode.', {
+        fontFamily: '"Arial Black", Impact, Inter, Arial, sans-serif',
+        fontSize: '12px',
+        color: '#fecaca',
+        align: 'center',
+        wordWrap: { width: 320 },
+      })
+      .setOrigin(0.5);
+    body.setResolution(2);
+    overlay.add([shade, panel, title, body]);
+
+    const addPopupButton = (x: number, label: string, danger: boolean, onClick: () => void): void => {
+      const button = this.add.graphics();
+      button.fillStyle(danger ? 0x7f1d1d : 0x120307, 1);
+      button.fillRoundedRect(x - 72, 38, 144, 38, 4);
+      button.lineStyle(3, 0x050104, 0.95);
+      button.strokeRoundedRect(x - 72, 38, 144, 38, 4);
+      button.lineStyle(1, danger ? 0xffd36d : 0xff243f, 0.65);
+      button.strokeRoundedRect(x - 64, 45, 128, 24, 2);
+      button.setInteractive(new Phaser.Geom.Rectangle(x - 72, 38, 144, 38), Phaser.Geom.Rectangle.Contains);
+      button.on('pointerdown', onClick);
+      const text = this.add
+        .text(x, 57, label, {
+          fontFamily: '"Arial Black", Impact, Inter, Arial, sans-serif',
+          fontSize: '12px',
+          color: danger ? '#ffd36d' : '#fee2e2',
+          fontStyle: '900',
+        })
+        .setOrigin(0.5);
+      text.setResolution(2);
+      overlay.add([button, text]);
+    };
+
+    addPopupButton(-84, 'CANCEL', false, () => {
+      AudioSystem.sfx('ui');
+      overlay.destroy(true);
+      this.resetConfirmOverlay = undefined;
+    });
+    addPopupButton(84, 'CONFIRM', true, () => {
+      GameProgress.resetAll();
+      GameSettings.set({ devMode: false });
+      AudioSystem.sfx('ui');
+      this.scene.start('TitleScene');
+    });
+
+    AudioSystem.sfx('trap');
   }
 
   private addCloseButton(container: Phaser.GameObjects.Container, x: number, y: number, onClick: () => void): void {
@@ -456,6 +689,40 @@ export class GameScene extends Phaser.Scene {
         color: active ? '#fee2e2' : '#fecaca',
         stroke: '#450a0a',
         strokeThickness: active ? 3 : 0,
+      })
+      .setOrigin(0.5);
+    text.setResolution(2);
+    addDynamic(button, text);
+  }
+
+  private addActionButton(
+    container: Phaser.GameObjects.Container,
+    addDynamic: (...items: Phaser.GameObjects.GameObject[]) => void,
+    x: number,
+    y: number,
+    width: number,
+    label: string,
+    onClick: () => void,
+    active = false,
+    danger = false,
+  ): void {
+    const button = this.add.graphics();
+    button.fillStyle(active ? 0xdc2626 : danger ? 0x450a0a : 0x120307, 1);
+    button.fillRoundedRect(x, y, width, 34, 4);
+    button.lineStyle(3, 0x050104, 0.95);
+    button.strokeRoundedRect(x, y, width, 34, 4);
+    button.lineStyle(1, danger ? 0xffd36d : 0xff243f, 0.58);
+    button.strokeRoundedRect(x + 5, y + 5, width - 10, 24, 2);
+    button.setInteractive(new Phaser.Geom.Rectangle(x, y, width, 34), Phaser.Geom.Rectangle.Contains);
+    button.on('pointerdown', onClick);
+
+    const text = this.add
+      .text(x + width / 2, y + 17, label, {
+        fontFamily: '"Arial Black", Impact, Inter, Arial, sans-serif',
+        fontSize: label.length > 9 ? '10px' : '12px',
+        color: danger ? '#ffd36d' : '#fee2e2',
+        fontStyle: '900',
+        align: 'center',
       })
       .setOrigin(0.5);
     text.setResolution(2);

@@ -58,18 +58,11 @@ export class Spike {
   reveal(): void {
     if (!this.hidden) return;
     this.hidden = false;
+    this.scene.tweens.killTweensOf(this.visual);
+    this.visual.setVisible(true).setAlpha(1).setScale(1);
     const body = this.zone.body as Phaser.Physics.Arcade.StaticBody;
     body.enable = true;
-    this.visual.setVisible(true);
-    this.scene.tweens.add({
-      targets: this.visual,
-      alpha: 1,
-      scaleX: 1.06,
-      scaleY: 1.06,
-      duration: 120,
-      yoyo: true,
-      ease: 'Sine.InOut',
-    });
+    body.updateFromGameObject();
   }
 
   moveTo(x: number, y: number, duration = 360, ease = 'Cubic.Out'): void {
