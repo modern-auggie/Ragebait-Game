@@ -11,7 +11,7 @@ export class TouchControls {
   private jumpPressed = false;
   private readonly items: Phaser.GameObjects.GameObject[] = [];
   private joystickPointerId?: number;
-  private readonly joystickCenter = { x: 112, y: GAME_HEIGHT - 72 };
+  private readonly joystickCenter = { x: 112, y: GAME_HEIGHT - 98 };
 
   constructor(
     private scene: Phaser.Scene,
@@ -49,6 +49,8 @@ export class TouchControls {
   }
 
   private createButton(key: TouchKey, x: number, y: number, label: string, size = 58): void {
+    const safeY = key === 'jump' ? Math.min(y, GAME_HEIGHT - 100) : Math.min(y, GAME_HEIGHT - 94);
+    const displayLabel = key === 'left' ? '<' : key === 'right' ? '>' : '^';
     const button = this.scene.add.graphics();
     button.setDepth(100);
     button.setScrollFactor(0);
@@ -56,19 +58,22 @@ export class TouchControls {
     const draw = (down: boolean): void => {
       button.clear();
       button.fillStyle(0x050104, 0.82);
-      button.fillRoundedRect(x - size / 2 + 5, y - size / 2 + 6, size, size, 4);
+      button.fillRoundedRect(x - size / 2 + 5, safeY - size / 2 + 6, size, size, 4);
       button.fillStyle(down ? 0x991b1b : 0x21060b, 0.94);
-      button.fillRoundedRect(x - size / 2, y - size / 2, size, size, 4);
+      button.fillRoundedRect(x - size / 2, safeY - size / 2, size, size, 4);
       button.lineStyle(4, down ? 0xff3b3b : 0x7f1d1d, 0.96);
-      button.strokeRoundedRect(x - size / 2, y - size / 2, size, size, 4);
+      button.strokeRoundedRect(x - size / 2, safeY - size / 2, size, size, 4);
       button.lineStyle(1, 0xffffff, 0.22);
-      button.strokeRoundedRect(x - size / 2 + 7, y - size / 2 + 7, size - 14, size - 14, 2);
+      button.strokeRoundedRect(x - size / 2 + 7, safeY - size / 2 + 7, size - 14, size - 14, 2);
     };
     draw(false);
-    button.setInteractive(new Phaser.Geom.Rectangle(x - size / 2, y - size / 2, size, size), Phaser.Geom.Rectangle.Contains);
+    button.setInteractive(
+      new Phaser.Geom.Rectangle(x - size / 2, safeY - size / 2, size, size),
+      Phaser.Geom.Rectangle.Contains,
+    );
 
     const text = this.scene.add
-      .text(x, y - 1, label, {
+      .text(x, safeY - 1, displayLabel, {
         fontFamily: '"Arial Black", Impact, Inter, Arial, sans-serif',
         fontSize: key === 'jump' ? '34px' : '30px',
         color: '#fee2e2',

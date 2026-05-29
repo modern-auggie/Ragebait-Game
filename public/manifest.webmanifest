@@ -1,0 +1,19 @@
+{
+  "name": "Ragebait Demo",
+  "short_name": "Ragebait",
+  "description": "A dark red ragebait platformer demo.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#050104",
+  "theme_color": "#050104",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
